@@ -38,6 +38,8 @@ class Button:
         self.on_click_args = on_click_args
 
     def click(self):
+        if not self.enabled:
+            return
         self.clicked = False
         if type(self.on_click) is tuple or type(self.on_click) is list:
             for item in self.on_click:

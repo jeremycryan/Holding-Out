@@ -37,7 +37,7 @@ class GameFrame(Frame):
     def __init__(self, game):
         super().__init__(game)
         self.player = Player(self)
-        self.enemies = [Enemy(self, position=(random.random()*c.WINDOW_WIDTH, random.random()*c.WINDOW_HEIGHT)) for i in range(6)]
+        self.enemies = []#[Enemy(self, position=(random.random()*c.WINDOW_WIDTH, random.random()*c.WINDOW_HEIGHT)) for i in range(6)]
         self.bullets = []
         self.particles = []
         Camera.init(self.player.position.get_position())
@@ -69,6 +69,15 @@ class GameFrame(Frame):
 
         self.delivery = DeliveryMenu(self)
 
+        self.music = pygame.mixer.Sound("assets/sound/please_hold.ogg")
+        self.music.set_volume(0)
+        self.music.play(-1)
+        self.music_volume = 0
+        self.full_music = pygame.mixer.Sound("assets/sound/please_hold_full.ogg")
+        self.full_music.play(-1)
+        self.full_music.set_volume(0)
+        self.target_music_volume = 0
+
     def spawn_goomba(self):
         okay = False
         while not okay:
@@ -86,7 +95,9 @@ class GameFrame(Frame):
         self.since_goomba += dt
         if self.since_goomba > 3 and self.spawn_intensity == 1:
             self.spawn_goomba()
-        elif self.since_goomba > 2.3 and self.spawn_intensity >= 2:
+        elif self.since_goomba > 2.3 and self.spawn_intensity == 2:
+            self.spawn_goomba()
+        elif self.since_goomba > 1.5 and self.spawn_intensity == 3:
             self.spawn_goomba()
 
 
@@ -117,6 +128,13 @@ class GameFrame(Frame):
         return surf
 
     def update(self, dt, events):
+        self.delivery.update(dt, events)
+        Camera.set_target(self.player.camera_target())
+        Camera.update(dt, events)
+        self.gary.update(dt, events)
+        if self.delivery.blocking():
+            dt = 0.00001
+
         self.update_enemy_spawning(dt, events)
         agents = [self.player] + self.enemies
         agents.sort(key=lambda agent: agent.position.y)
@@ -160,21 +178,26 @@ class GameFrame(Frame):
             if self.game_over_alpha < self.game_over_target_alpha:
                 self.game_over_alpha = self.game_over_target_alpha
 
-        Camera.set_target(self.player.camera_target())
-        Camera.update(dt, events)
-
         self.background.update(dt, events)
-        self.gary.update(dt, events)
+
         self.ammo_font = pygame.font.Font("assets/fonts/RPGSystem.ttf", 30)
         self.ammo_chars = {char:self.ammo_font.render(char, 0, (255, 255, 255)) for char in "1234567890.-,"}
 
-        self.delivery.update(dt, events)
+        if self.music_volume < self.target_music_volume:
+            self.music_volume += dt*4
+            if self.music_volume > self.target_music_volume:
+                self.music_volume = self.target_music_volume
+        if self.music_volume > self.target_music_volume:
+            self.music_volume -= dt*5
+            if self.music_volume < self.target_music_volume:
+                self.music_volume = self.target_music_volume
+        self.music.set_volume(self.music_volume)
+        full_music_target = max(self.delivery.lowered, self.gary.showing)
+        self.full_music.set_volume(0.7*min(1 - self.music_volume, full_music_target))
 
     def get_delivery(self):
         if not self.delivery.blocking():
             self.delivery.lower()
-        else:
-            self.delivery.raise_up()
 
     def draw(self, surface, offset=(0, 0)):
         surface.fill((0, 0, 0))

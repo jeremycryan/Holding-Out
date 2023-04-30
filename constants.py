@@ -8,7 +8,7 @@ WINDOW_HEIGHT = 600
 
 WINDOW_SIZE = WINDOW_WIDTH, WINDOW_HEIGHT
 
-CAPTION = "Please hold while a representative eats your brains"
+CAPTION = "Holding Out"
 FRAMERATE = 100
 
 WALKING = 0
@@ -28,9 +28,9 @@ ARENA_SIZE = 4000
 BACKGROUND = 0
 FOREGROUND = 1
 
-CPS=3000#30
+CPS=30#30
 
-HOLD_TIMES = (5, 30, 30, 1)
+HOLD_TIMES = (5, 30, 30, 0, 45, 20, 20, 0, 40, 40, 20, 0, 0)
 DISCONNECT_LINES = ["Hello? Sorry, I think I lost you for a second.","Are you still there? Oh good, you're back."]
 COMPANY_NAME = "Company Name"
 

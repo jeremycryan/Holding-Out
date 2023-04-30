@@ -32,9 +32,14 @@ class Player:
         self.fire_rate = 0.25
         self.destroyed = False
 
-        self.ammo = 200
-        self.max_ammo = 200
+        self.ammo = 120
+        self.max_ammo = self.ammo
         self.upgrades = []
+
+        self.gunshot_sound = SoundManager.load("assets/sound/gunshot.ogg")
+        self.gunshot_sound.set_volume(0.3)
+        self.dodge_sound = SoundManager.load("assets/sound/dodge.ogg")
+        self.dodge_sound.set_volume(0.4)
 
         walk_right = Animation.from_path(
             "assets/images/walk_right.png",
@@ -143,6 +148,8 @@ class Player:
 
         self.holding_phone = False
         self.since_pick_up = 10
+        self.hurt_sound = SoundManager.load("assets/sound/player_hurt.ogg")
+        self.hurt_sound.set_volume(1)
 
 
         self.gun_angle = 0
@@ -165,6 +172,7 @@ class Player:
     def get_hurt(self, direction=None):
         if self.since_damage < 1.25 or self.dead:
             return
+        self.hurt_sound.play()
         self.since_damage = 0
         self.animation_state = c.TAKING_DAMAGE
         if self.last_lr_direction == c.RIGHT:
@@ -317,6 +325,7 @@ class Player:
             direction.scale_to(1)
         self.velocity = direction * 360
         Camera.shake(10)
+        self.dodge_sound.play()
 
     def stop_rolling(self):
         self.rolling = False
@@ -361,11 +370,13 @@ class Player:
             if not self.rolling or "Spinning Death" in self.upgrades:
                 effective_fire_rate = self.fire_rate
                 if "Full Auto" in self.upgrades:
-                    effective_fire_rate *= 0.7
+                    effective_fire_rate *= 0.6
                 if self.since_fire > effective_fire_rate and not self.holding_phone and self.ammo and not self.dead and not self.frame.delivery.blocking():
                     self.fire()
 
     def fire(self):
+        self.gunshot_sound.play()
+
         self.frame.bullets_fired += 1
         gun_angle = self.gun_angle
         position = Pose((35, 0))
@@ -378,6 +389,7 @@ class Player:
             damage += 20
         if "Piercing" in self.upgrades:
             pierce += 1
+        position.rotate_position(random.random()*10 - 5)
         self.frame.bullets.append(Bullet(world_position.get_position(), position.get_position(), damage=damage, pierce=pierce, frame=self.frame))
         self.since_fire = 0
         self.velocity -= position*2

@@ -6,6 +6,7 @@ import pygame
 from camera import Camera
 from image_manager import ImageManager
 from primitives import Pose
+from sound_manager import SoundManager
 
 
 class Phone:
@@ -41,6 +42,8 @@ class Phone:
         self.since_hold = 0
         self.hold_time = 10
 
+        self.ring = SoundManager.load("assets/sound/phone_ring.ogg")
+
     def pick_up(self):
         self.phone_on = False
         if not self.frame.gary.lines:
@@ -68,9 +71,13 @@ class Phone:
         self.on_hold = True
         self.since_hold = 0
         self.hold_time = time
+        self.frame.target_music_volume = 1
 
     def stop_hold(self):
         self.on_hold = False
+        self.frame.target_music_volume = 0
+        if 1:#self.since_hold > 0.25:
+            self.ring.play()
 
     def draw(self, surface, offset=(0, 0)):
 

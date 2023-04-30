@@ -46,12 +46,19 @@ class DeliveryMenu:
     def lower(self):
         self.target = 1
         self.buttons = self.starting_buttons.copy()
+        used = []
         for i in range(2):
-            if self.upgrade_types:
-                utype = random.choice(self.upgrade_types)
-                self.upgrade_types.remove(utype)
+            if self.upgrade_types and len(self.upgrade_types) > len(used):
+                valid = self.upgrade_types.copy()
+                for item in used:
+                    if item in valid:
+                        valid.remove(item)
+                utype = random.choice(valid)
                 self.buttons.append(self.make_delivery_button(utype))
+                used.append(utype)
         self.upgrade_quota = 2
+        for button in self.buttons:
+            button.enable()
 
     def draw_buttons(self, surface, offset):
         x = 285 + 100
@@ -116,12 +123,24 @@ class DeliveryMenu:
         disabled_surf = surf.copy()
         disabled_surf.blit(shade, (0, 0))
 
-        button = Button(surf, (0, 0), grow_percent=10, on_click=self.get_upgrade, on_click_args=(upgrade,), disabled_surf=disabled_surf)
+        shade.fill((255, 255, 255))
+        shade.set_alpha(160)
+        click_surf = surf.copy()
+        click_surf.blit(shade, (0, 0))
+
+        shade.fill((255, 255, 255))
+        shade.set_alpha(50)
+        hover_surf = surf.copy()
+        hover_surf.blit(shade, (0, 0))
+
+        button = Button(surf, (0, 0), grow_percent=10, on_click=self.get_upgrade, on_click_args=(upgrade,), disabled_surf=disabled_surf, pulse=False, click_surf=click_surf, hover_surf=hover_surf)
         button.upgrade_type = upgrade
         return button
 
     def get_upgrade(self, upgrade_type):
         Camera.shake(10)
+        if upgrade_type in self.upgrade_types:
+            self.upgrade_types.remove(upgrade_type)
         for button in self.buttons:
             if button.upgrade_type == upgrade_type:
                 button.disable()

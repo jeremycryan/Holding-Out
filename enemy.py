@@ -6,6 +6,7 @@ from primitives import Pose
 from pyracy.sprite_tools import Sprite, Animation
 
 import constants as c
+from sound_manager import SoundManager
 
 
 class Enemy:
@@ -34,6 +35,10 @@ class Enemy:
 
         self.arrived = True
         self.since_arrived = random.random()
+
+        self.sounds = [SoundManager.load(f"assets/sound/zombie_hit_{n}.ogg") for n in range(1, 8)]
+        for sound in self.sounds:
+            sound.set_volume(0.4)
 
         walk_right = Animation.from_path(
             "assets/images/zombie_walk_right.png",
@@ -252,6 +257,7 @@ class Enemy:
 
         bullet.reduce_durability()
         self.velocity += bullet.velocity
+        random.choice(self.sounds).play()
 
     def collide_with_other(self, other, dt):
         if other is self:

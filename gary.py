@@ -5,6 +5,7 @@ import pygame
 
 from image_manager import ImageManager
 import constants as c
+from sound_manager import SoundManager
 
 
 class Gary:
@@ -16,9 +17,9 @@ class Gary:
         self.target = 0
 
         self.dialog_font = pygame.font.Font("assets/fonts/RPGSystem.ttf", 26)
-        self.letters = {letter: self.dialog_font.render(letter, 1, (255, 255, 255)) for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.,?!|- "}
+        self.letters = {letter: self.dialog_font.render(letter, 1, (255, 255, 255)) for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.,?!|- ()"}
         self.red_letters = {letter: self.dialog_font.render(letter, 1, (0, 255, 120)) for letter in
-                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.,?!|- "}
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.,?!|- ()"}
 
         self.back = pygame.Surface((c.WINDOW_WIDTH, 150))
         self.back.fill((0, 0, 0))
@@ -50,13 +51,61 @@ class Gary:
              "No? You just want the ammunition and equipment as soon as possible? Okey-dokey.",
              "We'll send someone out right away. I'll put you on hold until we can confirm receipt."],
             ["Eyes up... your delivery is inbound!"],
+            [f"Thanks for calling {c.COMPANY_NAME}, where you value your time so we don't have to.",
+             "Oh, you'd like to request another delivery? Sure, I'll take a look...",
+             "Hang on, someone just walked into the office with donuts. I'm going to put you on hold for a second."],
+            ["(chewing noises)",
+             "...oh, I accidentally turned on the customer line. Sorry sir, a few more moments."],
+            ["Delicious! Thanks for waiting.",
+             "Say... what is your favorite kind of donut? I like maple bars, but glazed are pretty good as well.",
+             "Oh, the delivery? I can send it now, it should be there any moment."],
+            ["Delivery arriving now!"],
+            [f"Thanks for calling {c.COMPANY_NAME}, we put the 'vice' in 'service.'",
+             "You again? You know, it's probably not healthy to be chewing through ammunition this quickly.",
+             "Oh. Zombies. I forgot.",
+             "Anyway, your order history is unusual enough we might want to run it past someone.",
+             "Please hold while I transfer you to sales."],
+            ["I forgot... I'm sales!",
+             "It's probably fine. Could I get your address one more time?",
+             "...",
+             "You're going to have to speak up, I can't hear you over the undead horde in the background.",
+             "...",
+             "Okay, I'll start processing the third delivery. Please hold."],
+            ["Hello again. The paperwork is all squared away, and the delivery person is en route.",
+             "I'll put you on hold until it gets there."],
+            ["Your delivery should be arriving now!"],
+            [f"Thanks for calling {c.COMPANY_NAME}, we hold you when no one else will.",
+             "Ah, welcome back! Let me guess, ammunition and equipment to fight the rotting armies of the dead?",
+             "You know, sales people really have an unfairly poor reputation.",
+             "I once met a produce salesman who was a great fellow. A truly stand-up guy.",
+             "Anyway, this guy would bring an apple into work every day, the kind with a sticker on it?",
+             "And every day, without fail, he'd eat the sticker.",
+             "Consistently.",
+             "The first time, I thought he just missed it. Maybe he was distracted. Happens to the best of us.",
+             "The second time, it was concerning. Usually people try to avoid eating stickers.",
+             "The third time... I could only assume the guy was just very dense.",
+             "That was ten years ago, and after all these years, I think I finally understand him.",
+             "He just liked the taste of stickers.",
+             "Anyway, your package should be arriving any second now."]
         ]
 
         self.hold_times = list(c.HOLD_TIMES)
         self.spacebar = ImageManager.load("assets/images/spacebar.png")
         self.lines_read = 0
 
+        self.bip = SoundManager.load("assets/sound/bip.ogg")
+
+        self.skip_to = 3
+        self.skipped = False
+
     def update(self, dt, events):
+        if not self.skipped:
+            self.skipped = True
+            for i in range(self.skip_to):
+                self.all_lines.pop(0)
+                self.next_wave()
+                self.frame.delivery.raise_up()
+
         self.since_start_line += dt
         self.since_blep += dt
         if self.target > self.showing:
@@ -68,11 +117,13 @@ class Gary:
             if self.showing < self.target:
                 self.showing = self.target
 
-        for event in events:
+        for event in events[:]:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     if self.target == 1 and self.ready_for_next_line():
                         self.next_line()
+                        events.remove(event)
+                        self.bip.play()
 
     def get_next_lines(self):
         if len(self.all_lines):
@@ -152,6 +203,18 @@ class Gary:
             self.frame.phone.start_hold(self.hold_times.pop(0))
         self.lines_read +=1
         if self.lines_read == 2:
+            self.frame.spawn_intensity += 1
+        if self.lines_read == 4:
+            self.frame.get_delivery()
+        if self.lines_read == 6:
+            self.frame.spawn_intensity += 1
+        if self.lines_read == 8:
+            self.frame.get_delivery()
+        if self.lines_read == 12:
+            self.frame.get_delivery()
+            self.frame.spawn_intensity += 1
+        if self.lines_read == 13:
+            self.frame.get_delivery()
             self.frame.spawn_intensity += 1
 
     def ready_for_next_line(self):
