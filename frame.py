@@ -5,7 +5,7 @@ import pygame
 from background import Background
 from camera import Camera
 from delivery_menu import DeliveryMenu
-from enemy import Enemy
+from enemy import Enemy, FastEnemy
 from gary import Gary
 from image_manager import ImageManager
 from phone import Phone
@@ -36,10 +36,11 @@ class Frame:
 class GameFrame(Frame):
     def __init__(self, game):
         super().__init__(game)
+        pygame.mixer.set_num_channels(20)
         self.player = Player(self)
-        self.enemies = []#[Enemy(self, position=(random.random()*c.WINDOW_WIDTH, random.random()*c.WINDOW_HEIGHT)) for i in range(6)]
         self.bullets = []
         self.particles = []
+        self.enemies = [Enemy(self, position=(random.random()*c.WINDOW_WIDTH, random.random()*c.WINDOW_HEIGHT)) for i in range(0)]
         Camera.init(self.player.position.get_position())
         self.vignette = ImageManager.load("assets/images/vignette.png")
         self.background = Background()
@@ -77,8 +78,14 @@ class GameFrame(Frame):
         self.full_music.play(-1)
         self.full_music.set_volume(0)
         self.target_music_volume = 0
+        self.groove = pygame.mixer.Sound("assets/sound/groove.ogg")
+        self.groove.set_volume(0.07)
+        self.groove.play(-1)
 
-    def spawn_goomba(self):
+    def spawn_goomba(self, elite_chance=0.12):
+        elite = False
+        if self.spawn_intensity >= 2:
+            elite = random.random()<elite_chance
         okay = False
         while not okay:
             x = random.random()*c.ARENA_WIDTH - c.ARENA_WIDTH//2
@@ -87,18 +94,29 @@ class GameFrame(Frame):
             diff = pos - self.player.position
             if diff.magnitude() > 256:
                 okay = True
-        new_enemy = Enemy(self, pos.get_position())
+        if not elite:
+            new_enemy = Enemy(self, pos.get_position())
+        else:
+            new_enemy = FastEnemy(self, pos.get_position())
         self.enemies.append(new_enemy)
         self.since_goomba = 0
 
     def update_enemy_spawning(self, dt, events):
         self.since_goomba += dt
+        if self.game_over:
+            return
         if self.since_goomba > 3 and self.spawn_intensity == 1:
             self.spawn_goomba()
         elif self.since_goomba > 2.3 and self.spawn_intensity == 2:
             self.spawn_goomba()
-        elif self.since_goomba > 1.5 and self.spawn_intensity == 3:
-            self.spawn_goomba()
+        elif self.since_goomba > 15 and self.spawn_intensity == 3:
+            num = min(10, (30 - len(self.enemies)))
+            for i in range(num):
+                self.spawn_goomba()
+        elif self.spawn_intensity > 0 and self.since_goomba > 5/self.spawn_intensity and self.spawn_intensity >= 5:
+            self.spawn_goomba(0.3)
+            self.spawn_intensity += 0.5
+
 
 
     def player_died(self):
@@ -108,6 +126,9 @@ class GameFrame(Frame):
         self.game_over_target_alpha = 255
 
     def next_frame(self):
+        self.music.fadeout(200)
+        self.groove.fadeout(200)
+        self.full_music.fadeout(200)
         return GameFrame(self.game)
 
     def collideables(self):
@@ -181,7 +202,7 @@ class GameFrame(Frame):
         self.background.update(dt, events)
 
         self.ammo_font = pygame.font.Font("assets/fonts/RPGSystem.ttf", 30)
-        self.ammo_chars = {char:self.ammo_font.render(char, 0, (255, 255, 255)) for char in "1234567890.-,"}
+        self.ammo_chars = {char:self.ammo_font.render(char, 0, (255, 255, 255)) for char in "1234567890.-,∞"}
 
         if self.music_volume < self.target_music_volume:
             self.music_volume += dt*4
@@ -194,6 +215,7 @@ class GameFrame(Frame):
         self.music.set_volume(self.music_volume)
         full_music_target = max(self.delivery.lowered, self.gary.showing)
         self.full_music.set_volume(0.7*min(1 - self.music_volume, full_music_target))
+        self.groove.set_volume(max(0, (1 - self.music_volume - full_music_target)*0.07))
 
     def get_delivery(self):
         if not self.delivery.blocking():
@@ -249,6 +271,8 @@ class GameFrame(Frame):
         surface.blit(self.hud, (0 ,0))
 
         ammo_str = str(self.player.ammo)
+        if self.player.infinite_ammo:
+            ammo_str="99999999999999999999999999999999999999999999999999999999999999"
         x = 40
         y = 45
         for char in ammo_str:

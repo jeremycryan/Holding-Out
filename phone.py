@@ -43,6 +43,9 @@ class Phone:
         self.hold_time = 10
 
         self.ring = SoundManager.load("assets/sound/phone_ring.ogg")
+        self.pick_up_sound = SoundManager.load("assets/sound/pick_up.ogg")
+        self.pick_up_sound.set_volume(0.05)
+        self.hang_up_sound = SoundManager.load("assets/sound/hang_up.ogg")
 
     def pick_up(self):
         self.phone_on = False
@@ -51,12 +54,14 @@ class Phone:
         else:
             self.frame.gary.restart_line()
             self.frame.gary.target = 1
+        self.pick_up_sound.play()
 
     def hang_up(self):
         self.phone_on = True
         self.since_hang_up = 0
         Camera.shake(10)
         self.frame.gary.target = 0
+        self.hang_up_sound.play()
 
     def update(self, dt, events):
         if self.phone_on:

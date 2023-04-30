@@ -139,6 +139,9 @@ class Pose:
     def __repr__(self):
         return self.__str__()
 
+    def dot(self, other):
+        return self.x * other.x + self.y * other.y
+
 
 class PhysicsObject(GameObject):
     def __init__(self, game, position, angle):

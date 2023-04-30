@@ -30,7 +30,7 @@ FOREGROUND = 1
 
 CPS=30#30
 
-HOLD_TIMES = (5, 30, 30, 0, 45, 20, 20, 0, 40, 40, 20, 0, 0)
+HOLD_TIMES = (5, 30, 30, 0, 45, 20, 20, 0, 15, 45, 30, 0, 15, 999999999999)
 DISCONNECT_LINES = ["Hello? Sorry, I think I lost you for a second.","Are you still there? Oh good, you're back."]
 COMPANY_NAME = "Company Name"
 
@@ -42,6 +42,9 @@ UPGRADES = (
     "Green",
     "Full Auto",
     "Spinning Death",
+    "Cricket",
+    "Seeking",
+    "Deadly Dodge",
 )
 
 UPGRADE_DESCRIPTIONS = (
@@ -52,5 +55,8 @@ UPGRADE_DESCRIPTIONS = (
     "Missed shots sometimes refund",
     "Shoot faster",
     "Can shoot while rolling",
+    "High damage, lower rate of fire",
+    "Bullets seek nearby enemies",
+    "Flurry when dodging",
 )
 

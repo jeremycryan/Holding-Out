@@ -17,9 +17,9 @@ class Gary:
         self.target = 0
 
         self.dialog_font = pygame.font.Font("assets/fonts/RPGSystem.ttf", 26)
-        self.letters = {letter: self.dialog_font.render(letter, 1, (255, 255, 255)) for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.,?!|- ()"}
+        self.letters = {letter: self.dialog_font.render(letter, 1, (255, 255, 255)) for letter in "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.,?!|- ()"}
         self.red_letters = {letter: self.dialog_font.render(letter, 1, (0, 255, 120)) for letter in
-                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.,?!|- ()"}
+                        "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.,?!|- ()"}
 
         self.back = pygame.Surface((c.WINDOW_WIDTH, 150))
         self.back.fill((0, 0, 0))
@@ -86,7 +86,12 @@ class Gary:
              "The third time... I could only assume the guy was just very dense.",
              "That was ten years ago, and after all these years, I think I finally understand him.",
              "He just liked the taste of stickers.",
-             "Anyway, your package should be arriving any second now."]
+             "Anyway, your package should be arriving any second now."],
+            ["That's the whole game! You win!",
+             "'Holding Out' was made in 48 hours for the Ludum Dare 53 Compo.",
+             "This game was made with Python and PyGame. The font is RPG System by Axel Lymphos.",
+             "If you want to stick around, I've given you every upgrade and infinite ammo.",
+             "Thanks for playing!",]
         ]
 
         self.hold_times = list(c.HOLD_TIMES)
@@ -95,8 +100,11 @@ class Gary:
 
         self.bip = SoundManager.load("assets/sound/bip.ogg")
 
-        self.skip_to = 3
+        self.skip_to = 0
         self.skipped = False
+
+        self.gary_talk = SoundManager.load("assets/sound/gary_talk.ogg")
+        self.through = True
 
     def update(self, dt, events):
         if not self.skipped:
@@ -108,6 +116,10 @@ class Gary:
 
         self.since_start_line += dt
         self.since_blep += dt
+        if self.since_blep > 0.16 and self.showing and not self.ready_for_next_line() and self.showing == 1:
+            self.gary_talk.play()
+            self.since_blep = 0
+
         if self.target > self.showing:
             self.showing += dt * 3
             if self.showing > self.target:
@@ -128,6 +140,9 @@ class Gary:
     def get_next_lines(self):
         if len(self.all_lines):
             self.add_dialog(self.all_lines.pop(0))
+        if self.lines_read == 13:
+            for enemy in self.frame.enemies:
+                enemy.die()
 
     def restart_line(self):
         self.since_start_line = 0
@@ -213,14 +228,20 @@ class Gary:
         if self.lines_read == 12:
             self.frame.get_delivery()
             self.frame.spawn_intensity += 1
+            self.frame.since_goomba = 12
         if self.lines_read == 13:
             self.frame.get_delivery()
+            self.frame.spawn_intensity += 1
+        if self.lines_read == 14:
+            self.frame.player.god_mode()
             self.frame.spawn_intensity += 1
 
     def ready_for_next_line(self):
         cps = c.CPS
         chars_showing = self.since_start_line * cps
         current_line = self.current_line()
+        if current_line:
+            current_line= current_line.replace("|","")
         if current_line and chars_showing > len(current_line):
             return True
 

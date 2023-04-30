@@ -78,3 +78,33 @@ class SparkParticle(Particle):
         surf = pygame.transform.rotate(surf, self.angle)
         pos = self.position + Pose(offset) - Pose((surf.get_width()//2, surf.get_height()//2)) + self.angle_pos*15
         surface.blit(surf, pos.get_position())
+
+class Poof(Particle):
+    def __init__(self, position=(0, 0), duration = 0.4):
+        velocity_angle = random.random()*360
+        velocity_magnitude = random.random()*200 + 300
+        velocity = Pose((velocity_magnitude, 0))
+        velocity.rotate_position(velocity_angle)
+        super().__init__(position=position, velocity=velocity.get_position(), duration=duration)
+        self.poof = ImageManager.load("assets/images/poof.png")
+        self.angle = random.random()*360
+        self.spin = random.random()*60 - 30
+
+    def update(self, dt, events):
+        super().update(dt, events)
+        self.velocity *= 0.001**dt
+        self.angle += self.spin*dt
+
+    def draw(self, surface, offset=(0, 0)):
+        if self.destroyed:
+            return
+        scale = 2 - 2*self.through()
+        surf = pygame.transform.scale(self.poof, (self.poof.get_width()*scale, self.poof.get_height()*scale))
+        surf = pygame.transform.rotate(surf, self.angle)
+        x = self.position.x + offset[0] - surf.get_width()//2
+        y = self.position.y + offset[1] - surf.get_height()//2
+        a = 128*(1 - self.through()**1.5)
+        a = 256
+        surf.set_alpha(a)
+
+        surface.blit(surf, (x, y))

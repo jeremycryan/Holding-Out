@@ -2,6 +2,7 @@ import random
 
 import pygame
 
+from particle import Poof
 from primitives import Pose
 from pyracy.sprite_tools import Sprite, Animation
 
@@ -148,13 +149,18 @@ class Enemy:
         self.max_speed = 80
         self.since_start_walking = 10
 
+        self.land()
+
     def cleanup(self):
         self.destroyed = True
+
+    def spread(self):
+        return 120
 
     def choose_new_target_position(self):
         start = self.position.copy()
         direction = self.player.position - self.position
-        spread = 120
+        spread = self.spread()
         direction.rotate_position(random.random()*spread - spread/2)
         direction.scale_to(70 + 50*random.random())
         return start + direction
@@ -177,11 +183,14 @@ class Enemy:
     def draw(self, surface, offset=(0, 0)):
         self.sprite.draw(surface, offset)
 
+    def wait_time(self):
+        return 1 + random.random()
+
     def arrive_at_target(self):
         self.target_position = self.position.copy()
         self.velocity = Pose((0, 0))
         self.arrived = True
-        self.since_arrived = 1 + random.random()
+        self.since_arrived = self.wait_time()
         if self.last_walk_direction.x > 0:
             self.sprite.start_animation("IdleRight",restart_if_active=False)
         else:
@@ -279,3 +288,153 @@ class Enemy:
     def draw_shadow(self, surface, offset=(0, 0)):
         surface.blit(self.shadow, (self.position.x + offset[0] - self.shadow.get_width()//2,
                                    self.position.y + offset[1] - self.shadow.get_height()//2 + 25))
+
+    def land(self):
+        for i in range(12):
+            pos = (self.position + Pose((0, 20))).get_position()
+            self.frame.particles.append(Poof(pos))
+
+class FastEnemy(Enemy):
+    def __init__(self, frame, position=(0, 0)):
+        self.frame = frame
+        self.player = self.frame.player
+
+        self.position = Pose(position)
+        self.velocity = Pose((0, 0))
+        self.target_velocity = Pose((0, 0))
+        self.sprite = Sprite(6, (0, 0))
+
+        self.last_walk_direction = Pose((1, 0))
+
+        self.is_player = False
+
+        self.dead = False
+
+        self.health = 100
+        self.max_health = 100
+        self.radius = self.player.radius
+
+        self.target_position = self.position.copy()
+        self.destroyed = False
+
+        self.arrived = True
+        self.since_arrived = random.random()
+
+        self.sounds = [SoundManager.load(f"assets/sound/zombie_hit_{n}.ogg") for n in range(1, 8)]
+        for sound in self.sounds:
+            sound.set_volume(0.4)
+
+        walk_right = Animation.from_path(
+            "assets/images/zombie_2_walk_right.png",
+            sheet_size=(6, 1),
+            frame_count=6,
+            scale=2.0,
+        )
+        walk_left = Animation.from_path(
+            "assets/images/zombie_2_walk_right.png",
+            sheet_size=(6, 1),
+            frame_count=6,
+            reverse_x=True,
+            scale=2.0,
+        )
+        idle_right = Animation.from_path(
+            "assets/images/zombie_2_forward_idle.png",
+            sheet_size=(8, 1),
+            frame_count=8,
+            scale=2.0,
+        )
+        idle_left = Animation.from_path(
+            "assets/images/zombie_2_forward_idle.png",
+            sheet_size=(8, 1),
+            frame_count=8,
+            reverse_x=True,
+            scale=2.0,
+        )
+        walk_back_right = Animation.from_path(
+            "assets/images/walk_right_back.png",
+            sheet_size=(6, 1),
+            frame_count=6,
+            scale=2.0,
+
+        )
+        walk_back_left = Animation.from_path(
+            "assets/images/walk_right_back.png",
+            sheet_size=(6, 1),
+            frame_count=6,
+            reverse_x=True,
+            scale=2.0,
+        )
+        dead = Animation.from_path(
+            "assets/images/zombie_2_death.png",
+            sheet_size=(8, 1),
+            frame_count=8,
+            scale=2.0,
+            time_scaling=2.0,
+        )
+        dead_long = Animation.from_path(
+            "assets/images/zombie_2_death_long.png",
+            sheet_size=(1, 1),
+            frame_count=1,
+            scale=2.0,
+            time_scaling=0.01,
+        )
+        take_damage_right = Animation.from_path(
+            "assets/images/zombie_2_take_damage.png",
+            sheet_size=(2, 1),
+            frame_count=2,
+            scale=2.0,
+            time_scaling = 2.0,
+        )
+        take_damage_left = Animation.from_path(
+            "assets/images/zombie_2_take_damage.png",
+            sheet_size=(2, 1),
+            frame_count=2,
+            reverse_x=True,
+            scale=2.0,
+            time_scaling = 2.0,
+        )
+
+        self.sprite.add_animation(
+            {
+                "WalkRight": walk_right,
+                "WalkLeft": walk_left,
+                "IdleRight": idle_right,
+                "IdleLeft": idle_left,
+                "WalkBackRight": walk_back_right,
+                "WalkBackLeft": walk_back_left,
+            },
+            loop=True
+        )
+        self.sprite.add_animation(
+            {
+                "Dead": dead,
+                "TakeDamageRight": take_damage_right,
+                "TakeDamageLeft": take_damage_left,
+                "DeadLong": dead_long,
+            },
+            loop=False
+        )
+
+        self.sprite.start_animation("IdleRight")
+        self.sprite.add_callback("TakeDamageRight",self.arrive_at_target)
+        self.sprite.add_callback("TakeDamageLeft",self.arrive_at_target)
+        self.sprite.add_callback("DeadLong",self.cleanup)
+        self.sprite.chain_animation("TakeDamageRight","IdleRight")
+        self.sprite.chain_animation("TakeDamageLeft","IdleLeft")
+        self.sprite.chain_animation("Dead","DeadLong")
+
+        self.shadow = pygame.Surface((self.radius*3, self.radius*3//2))
+        self.shadow.fill((255, 255, 0))
+        self.shadow.set_colorkey((255, 255, 0))
+        pygame.draw.ellipse(self.shadow, (0, 0, 0), self.shadow.get_rect())
+        self.shadow.set_alpha(60)
+
+        self.max_speed = 80
+        self.since_start_walking = 10
+        self.max_speed = 120
+
+    def wait_time(self):
+        return 0.5
+
+    def spread(self):
+        return 0

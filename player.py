@@ -1,6 +1,6 @@
 from bullet import Bullet
 from image_manager import ImageManager
-from particle import SparkParticle
+from particle import SparkParticle, Poof
 from pyracy.sprite_tools import Sprite, Animation
 from primitives import Pose
 import pygame
@@ -14,7 +14,7 @@ class Player:
 
     def __init__(self, frame):
         self.frame = frame
-        self.position = Pose((0, 0))
+        self.position = Pose((-96, 0))
         Camera.position = self.position.copy() - Pose(c.WINDOW_SIZE)*0.5
         self.velocity = Pose((0, 0))
         self.sprite = Sprite(12, (0, 0))
@@ -34,7 +34,7 @@ class Player:
 
         self.ammo = 120
         self.max_ammo = self.ammo
-        self.upgrades = []
+        self.upgrades = ["Hat"]
 
         self.gunshot_sound = SoundManager.load("assets/sound/gunshot.ogg")
         self.gunshot_sound.set_volume(0.3)
@@ -159,6 +159,15 @@ class Player:
         self.phone_surf = pygame.transform.rotate(self.phone_surf, (90))
         self.phone_surf = pygame.transform.scale(self.phone_surf, (self.phone_surf.get_width()*2, self.phone_surf.get_height()*2))
 
+        self.hat = ImageManager.load("assets/images/hat.png")
+        self.hat = pygame.transform.scale(self.hat, (self.hat.get_width()*2, self.hat.get_height()*2))
+
+        self.infinite_ammo = False
+
+    def god_mode(self):
+        self.upgrades = c.UPGRADES
+        self.infinite_ammo = True
+
     def stop_taking_damage(self):
         self.animation_state = c.IDLE
 
@@ -185,6 +194,7 @@ class Player:
         self.health -= 1
 
     def update(self, dt, events):
+
         self.since_damage += dt
         if self.holding_phone:
             self.since_pick_up += dt
@@ -227,6 +237,9 @@ class Player:
                     if self.dead or self.frame.delivery.blocking():
                         continue
                     self.check_phone_pickup()
+
+        if self.infinite_ammo:
+            self.ammo = 999
 
     def check_phone_pickup(self):
         if not self.holding_phone:
@@ -327,12 +340,40 @@ class Player:
         Camera.shake(10)
         self.dodge_sound.play()
 
+        if "Deadly Dodge" in self.upgrades and self.ammo > 2:
+            damage = 40
+            pierce = 1
+            if "Beefy Bullets" in self.upgrades:
+                damage += 20
+            if "Cricket" in self.upgrades:
+                damage += 80
+            if "Piercing" in self.upgrades:
+                pierce += 1
+            homing = "Seeking" in self.upgrades
+            for angle in [0, 60, 120, 180, 240, 300]:
+                position = Pose((20, 0))
+                position.rotate_position(angle)
+                world_position = position + self.position
+                self.frame.bullets.append(
+                    Bullet(world_position.get_position(), position.get_position(), damage=damage, pierce=pierce,
+                           frame=self.frame, homing=homing, refundable=True))
+                self.since_fire = 0
+                self.velocity -= position * 2
+            self.gunshot_sound.play()
+            Camera.shake(10, position.get_position())
+            self.ammo -= 2
+            self.frame.bullets_fired += 6
+
     def stop_rolling(self):
         self.rolling = False
 
         self.animation_state = c.IDLE
         self.sprite.start_animation("IdleRight")
         Camera.shake(10)
+
+        for i in range(12):
+            pos = (self.position + Pose((0, 20))).get_position()
+            self.frame.particles.append(Poof(pos))
 
     def draw(self, surface, offset=(0, 0)):
         up = "Back" in self.sprite.active_animation_key
@@ -345,6 +386,17 @@ class Player:
 
         if self.holding_phone:
             self.draw_phone(surface, offset)
+
+        # if "Hat" in self.upgrades:
+        #     self.draw_hat(surface, offset)
+
+    def draw_hat(self, surface, offset):
+        if self.rolling:
+            return
+        x = self.position.x + offset[0] - self.hat.get_width()//2
+        y = self.position.y + offset[1] - 32
+        surface.blit(self.hat, (x, y))
+        pass
 
     def draw_phone(self, surface, offset):
         if self.dead:
@@ -371,6 +423,8 @@ class Player:
                 effective_fire_rate = self.fire_rate
                 if "Full Auto" in self.upgrades:
                     effective_fire_rate *= 0.6
+                if "Cricket" in self.upgrades:
+                    effective_fire_rate *= 3
                 if self.since_fire > effective_fire_rate and not self.holding_phone and self.ammo and not self.dead and not self.frame.delivery.blocking():
                     self.fire()
 
@@ -385,27 +439,35 @@ class Player:
         world_position = position + self.position + gun_offset
         damage = 40
         pierce = 1
+        homing = "Seeking" in self.upgrades
         if "Beefy Bullets" in self.upgrades:
             damage += 20
+        if "Cricket" in self.upgrades:
+            damage += 80
         if "Piercing" in self.upgrades:
             pierce += 1
+
         position.rotate_position(random.random()*10 - 5)
-        self.frame.bullets.append(Bullet(world_position.get_position(), position.get_position(), damage=damage, pierce=pierce, frame=self.frame))
+        self.frame.bullets.append(Bullet(world_position.get_position(), position.get_position(), damage=damage, pierce=pierce, frame=self.frame, homing=homing))
         self.since_fire = 0
         self.velocity -= position*2
-        Camera.shake(10, position.get_position())
+        shake_amt = 10
+        if "Cricket" in self.upgrades:
+            shake_amt = 20
+        Camera.shake(shake_amt, position.get_position())
         self.ammo -= 1
 
         up = "Back" in self.sprite.active_animation_key
         for i in range(1):
             self.frame.particles.append(SparkParticle(world_position.get_position(),(position*2)))
 
-        if "Hell's Shells" in self.upgrades:
+        if "Hell's Shells" in self.upgrades and self.ammo>1:
             self.ammo -= 1
             position.rotate_position(15)
-            self.frame.bullets.append(Bullet(world_position.get_position(), position.get_position(), damage=damage, pierce=pierce, frame=self.frame))
+            self.frame.bullets.append(Bullet(world_position.get_position(), position.get_position(), damage=damage, pierce=pierce, frame=self.frame, homing=homing))
             position.rotate_position(-30)
-            self.frame.bullets.append(Bullet(world_position.get_position(), position.get_position(), damage=damage, pierce=pierce, frame=self.frame))
+            self.frame.bullets.append(Bullet(world_position.get_position(), position.get_position(), damage=damage, pierce=pierce, frame=self.frame, homing=homing))
+            self.frame.bullets_fired += 2
 
         if self.ammo < 0:
             self.ammo = 0
