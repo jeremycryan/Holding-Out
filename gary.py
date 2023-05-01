@@ -33,7 +33,8 @@ class Gary:
         ]
 
         self.all_lines = [
-            [f"Thanks for calling {c.COMPANY_NAME}! Please hold.",
+            [f"Thanks for calling {c.COMPANY_NAME}, where you value your time so we don't have to!",
+             "Please hold.",
              ],
             ["Sorry for the wait! I'm Gary, and I'll be your customer service representative this evening.",
              "How can I help you today?",
@@ -51,7 +52,7 @@ class Gary:
              "No? You just want the ammunition and equipment as soon as possible? Okey-dokey.",
              "We'll send someone out right away. I'll put you on hold until we can confirm receipt."],
             ["Eyes up... your delivery is inbound!"],
-            [f"Thanks for calling {c.COMPANY_NAME}, where you value your time so we don't have to.",
+            [f"Thanks for calling {c.COMPANY_NAME}. We put the 'vice' in 'service'!",
              "Oh, you'd like to request another delivery? Sure, I'll take a look...",
              "Hang on, someone just walked into the office with donuts. I'm going to put you on hold for a second."],
             ["(chewing noises)",
@@ -60,7 +61,7 @@ class Gary:
              "Say... what is your favorite kind of donut? I like maple bars, but glazed are pretty good as well.",
              "Oh, the delivery? I can send it now, it should be there any moment."],
             ["Delivery arriving now!"],
-            [f"Thanks for calling {c.COMPANY_NAME}, we put the 'vice' in 'service.'",
+            [f"Thanks for calling {c.COMPANY_NAME}, we hold you when no one else will.",
              "You again? You know, it's probably not healthy to be chewing through ammunition this quickly.",
              "Oh. Zombies. I forgot.",
              "Anyway, your order history is unusual enough we might want to run it past someone.",
@@ -74,7 +75,7 @@ class Gary:
             ["Hello again. The paperwork is all squared away, and the delivery person is en route.",
              "I'll put you on hold until it gets there."],
             ["Your delivery should be arriving now!"],
-            [f"Thanks for calling {c.COMPANY_NAME}, we hold you when no one else will.",
+            [f"Thanks for calling {c.COMPANY_NAME}, where all the hitboxes are circles because they're easier to code.",
              "Ah, welcome back! Let me guess, ammunition and equipment to fight the rotting armies of the dead?",
              "You know, sales people really have an unfairly poor reputation.",
              "I once met a produce salesman who was a great fellow. A truly stand-up guy.",
@@ -142,7 +143,8 @@ class Gary:
             self.add_dialog(self.all_lines.pop(0))
         if self.lines_read == 13:
             for enemy in self.frame.enemies:
-                enemy.die()
+                if not enemy.dead:
+                    enemy.die()
 
     def restart_line(self):
         self.since_start_line = 0
@@ -228,7 +230,7 @@ class Gary:
         if self.lines_read == 12:
             self.frame.get_delivery()
             self.frame.spawn_intensity += 1
-            self.frame.since_goomba = 12
+            self.frame.since_goomba = 8
         if self.lines_read == 13:
             self.frame.get_delivery()
             self.frame.spawn_intensity += 1

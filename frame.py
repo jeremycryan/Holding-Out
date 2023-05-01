@@ -110,7 +110,7 @@ class GameFrame(Frame):
         elif self.since_goomba > 2.3 and self.spawn_intensity == 2:
             self.spawn_goomba()
         elif self.since_goomba > 15 and self.spawn_intensity == 3:
-            num = min(10, (30 - len(self.enemies)))
+            num = min(10, (40 - len(self.enemies)))
             for i in range(num):
                 self.spawn_goomba()
         elif self.spawn_intensity > 0 and self.since_goomba > 5/self.spawn_intensity and self.spawn_intensity >= 5:
