@@ -110,9 +110,7 @@ class Pose:
         return copy
 
     def __sub__(self, other):
-        copy = self.copy()
-        copy.add_pose(other, weight=-1)
-        return copy
+        return Pose((self.x - other.x, self.y - other.y), self.angle - other.angle)
 
     def __mul__(self, other):
         copy = self.copy()

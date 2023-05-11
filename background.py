@@ -23,8 +23,9 @@ class Background:
                 tile_surf = pygame.Surface(tile_size)
                 tile_surf.fill((255, 0, 255))
                 tile_surf.blit(surf,(0, 0),(xpix, ypix, tile_size[0], tile_size[1]))
+                tile_surf = tile_surf.convert()
                 row.append(tile_surf)
-                tile_surf.set_colorkey((255, 0, 255))
+
             self.tiles.append(row)
 
     def draw(self, surface, offset=(0, 0)):

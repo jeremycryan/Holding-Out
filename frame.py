@@ -82,6 +82,9 @@ class GameFrame(Frame):
         self.groove.set_volume(0.07)
         self.groove.play(-1)
 
+        self.ammo_font = pygame.font.Font("assets/fonts/RPGSystem.ttf", 30)
+        self.ammo_chars = {char:self.ammo_font.render(char, 0, (255, 255, 255)) for char in "1234567890.-,∞"}
+
     def spawn_goomba(self, elite_chance=0.12):
         elite = False
         if self.spawn_intensity >= 2:
@@ -99,6 +102,7 @@ class GameFrame(Frame):
         else:
             new_enemy = FastEnemy(self, pos.get_position())
         self.enemies.append(new_enemy)
+        self.enemies.sort(key=lambda each: each.position.y)
         self.since_goomba = 0
 
     def update_enemy_spawning(self, dt, events):
@@ -201,8 +205,7 @@ class GameFrame(Frame):
 
         self.background.update(dt, events)
 
-        self.ammo_font = pygame.font.Font("assets/fonts/RPGSystem.ttf", 30)
-        self.ammo_chars = {char:self.ammo_font.render(char, 0, (255, 255, 255)) for char in "1234567890.-,∞"}
+
 
         if self.music_volume < self.target_music_volume:
             self.music_volume += dt*4
@@ -222,7 +225,7 @@ class GameFrame(Frame):
             self.delivery.lower()
 
     def draw(self, surface, offset=(0, 0)):
-        surface.fill((0, 0, 0))
+        #surface.fill((0, 0, 0))
 
 
         agents = [self.player] + self.enemies + [self.phone]

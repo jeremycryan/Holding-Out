@@ -196,14 +196,7 @@ class Enemy:
         else:
             self.sprite.start_animation("IdleLeft",restart_if_active=False)
 
-    def update(self, dt, events):
-        self.sprite.set_position(self.position.get_position())
-        self.sprite.update(dt, events)
-
-        if self.health < 0:
-            if not self.dead:
-                self.die()
-
+    def update_target_motion(self, dt):
         if not self.dead:
             target_direction = self.target_position - self.position
             if target_direction.magnitude() > 20:
@@ -218,6 +211,16 @@ class Enemy:
             elif not self.arrived:
                 self.arrive_at_target()
 
+    def update(self, dt, events):
+        self.sprite.set_position(self.position.get_position())
+        self.sprite.update(dt, events)
+
+        if self.health < 0:
+            if not self.dead:
+                self.die()
+
+        self.update_target_motion(dt)
+
 
         if self.arrived and not self.dead:
             self.since_arrived -= dt
@@ -230,21 +233,52 @@ class Enemy:
         if self.velocity.magnitude() > self.max_speed:
             self.velocity.scale_to(self.max_speed)
 
-        self.position += self.velocity*dt
         if not self.dead:
-            for item in self.frame.collideables():
+            min_y = self.position.y - 50
+            max_y = self.position.y + 50
+            min_x = self.position.x - 50
+            max_x = self.position.x + 50
+            for item in self.frame.enemies:
+                if item.dead:
+                    continue
+                if item.position.y > max_y:
+                    break
+                if item.position.y < min_y or item.position.x < min_x or item.position.x > max_x:
+                    continue
                 diff = self.position - item.position
-                if diff.magnitude() < self.radius + item.radius:
+                dist = diff.magnitude()
+                if dist < self.radius + item.radius:
                     self.collide_with_other(item, dt)
-                elif diff.magnitude() < self.radius + item.radius + 5:
-                    if item.is_player:
-                        continue
+                elif dist < self.radius + item.radius + 5:
                     self.velocity += diff*dt*10
                     item.velocity += diff*-dt*10
+            for item in [self.frame.player, self.frame.phone]:
+                if item.position.y > max_y:
+                    continue
+                if item.position.y < min_y or item.position.x < min_x or item.position.x > max_x:
+                    continue
+                diff = self.position - item.position
+                dist = diff.magnitude()
+                if dist < self.radius + item.radius:
+                    self.collide_with_other(item, dt)
+                elif dist <= self.radius + item.radius + 20:
+                    if item.is_player:
+                        continue
+                    fact = 1/(dist - self.radius - item.radius)
+                    self.velocity += diff*dt*20*(fact)
+                    item.velocity += diff*-dt*20*(fact)
             for bullet in self.frame.bullets:
+                if bullet.position.y > max_y:
+                    continue
+                if bullet.position.y < min_y or bullet.position.x < min_x or bullet.position.x > max_x:
+                    continue
+                if not bullet.can_hit(self):
+                    continue
                 diff = bullet.position - self.position
-                if diff.magnitude() < self.radius + bullet.radius and bullet.can_hit(self):
+                if diff.magnitude() < self.radius + bullet.radius:
                     self.get_hurt(bullet)
+
+        self.position += self.velocity*dt
 
         if self.position.x < -c.ARENA_WIDTH//2 + self.radius:
             self.position.x = -c.ARENA_WIDTH//2 + self.radius
@@ -265,7 +299,7 @@ class Enemy:
             self.sprite.start_animation("TakeDamageLeft")
 
         bullet.reduce_durability()
-        self.velocity += bullet.velocity
+        self.velocity += bullet.velocity*0.25
         random.choice(self.sounds).play()
 
     def collide_with_other(self, other, dt):

@@ -92,17 +92,26 @@ class Poof(Particle):
 
     def update(self, dt, events):
         super().update(dt, events)
-        self.velocity *= 0.001**dt
+        self.velocity.x *= 0.001**dt
+        self.velocity.y *= 0.001**dt
         self.angle += self.spin*dt
 
     def draw(self, surface, offset=(0, 0)):
         if self.destroyed:
             return
+        x = self.position.x + offset[0]
+        y = self.position.y + offset[1]
+        if x < -100 or x > c.WINDOW_WIDTH + 100:
+            return
+        if y < -100 or y > c.WINDOW_HEIGHT + 100:
+            return
+
         scale = 2 - 2*self.through()
         surf = pygame.transform.scale(self.poof, (self.poof.get_width()*scale, self.poof.get_height()*scale))
         surf = pygame.transform.rotate(surf, self.angle)
-        x = self.position.x + offset[0] - surf.get_width()//2
-        y = self.position.y + offset[1] - surf.get_height()//2
+        x -= surf.get_width()//2
+        y -= surf.get_height()//2
+
         a = 128*(1 - self.through()**1.5)
         a = 256
         surf.set_alpha(a)
